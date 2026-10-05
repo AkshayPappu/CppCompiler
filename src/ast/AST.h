@@ -1,11 +1,17 @@
 #pragma once
 
 #include "common/SourceLocation.h"
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace cc {
+
+// Forward declarations for semantic annotations (defined in semantic/)
+class Type;
+class Symbol;
+class FunctionSymbol;
 
 // ============================================================================
 // Forward declarations
@@ -124,6 +130,9 @@ inline const char* unaryOpToString(UnaryOp op) {
 class Expr : public ASTNode {
 public:
     using ASTNode::ASTNode;
+
+    // Populated by semantic analysis; nullptr until then.
+    const Type* resolvedType = nullptr;
 };
 
 class BinaryExpr : public Expr {
@@ -156,6 +165,9 @@ public:
     std::string target;
     std::unique_ptr<Expr> value;
 
+    // Populated by semantic analysis: the variable/parameter being assigned to.
+    const Symbol* resolvedSymbol = nullptr;
+
     AssignmentExpr(SourceLocation loc, std::string target,
                    std::unique_ptr<Expr> value)
         : Expr(std::move(loc)), target(std::move(target)),
@@ -169,6 +181,9 @@ public:
     std::string callee;
     std::vector<std::unique_ptr<Expr>> arguments;
 
+    // Populated by semantic analysis: the function being called.
+    const FunctionSymbol* resolvedFunction = nullptr;
+
     CallExpr(SourceLocation loc, std::string callee,
              std::vector<std::unique_ptr<Expr>> arguments)
         : Expr(std::move(loc)), callee(std::move(callee)),
@@ -180,6 +195,9 @@ public:
 class IdentifierExpr : public Expr {
 public:
     std::string name;
+
+    // Populated by semantic analysis: the declaration this name resolves to.
+    const Symbol* resolvedSymbol = nullptr;
 
     IdentifierExpr(SourceLocation loc, std::string name)
         : Expr(std::move(loc)), name(std::move(name)) {}
@@ -281,6 +299,9 @@ public:
     std::string varName;
     std::unique_ptr<Expr> initializer; // may be nullptr
 
+    // Populated by semantic analysis: the symbol this declaration creates.
+    const Symbol* resolvedSymbol = nullptr;
+
     VarDeclStmt(SourceLocation loc, std::string typeName, std::string varName,
                 std::unique_ptr<Expr> init = nullptr)
         : Stmt(std::move(loc)), typeName(std::move(typeName)),
@@ -297,6 +318,9 @@ struct Parameter {
     std::string typeName;
     std::string name;
     SourceLocation location;
+
+    // Populated by semantic analysis: the parameter symbol.
+    const Symbol* resolvedSymbol = nullptr;
 };
 
 class FunctionDecl : public ASTNode {
@@ -305,6 +329,9 @@ public:
     std::string name;
     std::vector<Parameter> parameters;
     std::unique_ptr<BlockStmt> body;
+
+    // Populated by semantic analysis: the function symbol for this declaration.
+    const FunctionSymbol* resolvedSymbol = nullptr;
 
     FunctionDecl(SourceLocation loc, std::string returnType, std::string name,
                  std::vector<Parameter> params, std::unique_ptr<BlockStmt> body)
